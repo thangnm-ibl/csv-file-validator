@@ -103,7 +103,9 @@
                 }
             });
 
-            file.data.push(columnData);
+            if (Object.keys(columnData).length > 0) {
+                file.data.push(columnData);
+            }
         });
 
         _checkUniqueFields(file, config);
