@@ -52,11 +52,23 @@
                 }
             }
 
-            // if (row.length < headers.length) {
-            //     return;
-            // }
+            if (row.length !== headers.length) {
 
+                let allValue = row.reduce((all, current) => `${all + current}`, '')
+                if (allValue.length > 0) {
+                    file.inValidMessages.push(
+                        _isFunction(config.getInvalidMessage)
+                            ? config.getInvalidMessage(rowIndex + 1)
+                            : 'Invalid data at row ' + (rowIndex + 1)
+                    );
+                    return;
+                }
+            }
+            // console.log('---> rowIndex', rowIndex, row)
+            let rowHasValue = false
+            let requiredErrors = []
             row.forEach(function(columnValue, columnIndex) {
+                
                 const valueConfig = config.headers[columnIndex];
 
                 if (!valueConfig) {
@@ -75,19 +87,35 @@
 
                     return;
                 }
-
+                if (columnValue.length > 0) {
+                    rowHasValue = true
+                }
                 if (valueConfig.required && !columnValue.length) {
-                    file.inValidMessages.push(
+                    requiredErrors.push(
                         _isFunction(valueConfig.requiredError)
                             ? valueConfig.requiredError(valueConfig.name, rowIndex + 1, columnIndex + 1)
                             : String(valueConfig.name + ' is required in the ' + (rowIndex + 1) + ' row / ' + (columnIndex + 1) + ' column')
                     );
+                    // file.inValidMessages.push(
+                    //     _isFunction(valueConfig.requiredError)
+                    //         ? valueConfig.requiredError(valueConfig.name, rowIndex + 1, columnIndex + 1)
+                    //         : String(valueConfig.name + ' is required in the ' + (rowIndex + 1) + ' row / ' + (columnIndex + 1) + ' column')
+                    // );
                 } else if (valueConfig.validate && !valueConfig.validate(columnValue)) {
                     file.inValidMessages.push(
                         _isFunction(valueConfig.validateError)
                             ? valueConfig.validateError(valueConfig.name, rowIndex + 1, columnIndex + 1)
                             : String(valueConfig.name + ' is not valid in the ' + (rowIndex + 1) + ' row / ' + (columnIndex + 1) + ' column')
                     );
+                }
+
+                // console.log('---> row - columnIndex', columnIndex, 'rowHasValue', rowHasValue, 'requiredErrors', requiredErrors.length)
+                if (columnIndex === row.length - 1) {
+                    if (rowHasValue && requiredErrors.length > 0) {
+                        file.inValidMessages = file.inValidMessages.concat(requiredErrors)
+                    }
+                    rowHasValue = false
+                    requiredErrors = []
                 }
 
                 if (valueConfig.optional) {
@@ -99,7 +127,9 @@
                         return value.trim();
                     });
                 } else {
-                    columnData[valueConfig.inputName] = columnValue;
+                    if (columnValue && columnValue.length > 0) {
+                        columnData[valueConfig.inputName] = columnValue;
+                    }
                 }
             });
 
